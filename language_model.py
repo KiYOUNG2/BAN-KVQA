@@ -112,12 +112,12 @@ class RnnQuestionEmbedding(nn.Module):
 class BertRnnQuestionEmbedding(nn.Module):
     def __init__(self, bert, rot_dim, q_dim, op):
         super(BertRnnQuestionEmbedding, self).__init__()
-        w_dim = 768
+        w_dim = bert.config.hidden_size
         self.w_emb = bert
         self.w_emb_ = FCNet([w_dim, rot_dim], 'ReLU', 0.)
         self.rnn = QuestionEmbedding(rot_dim if 'c' not in op else rot_dim * 2, q_dim, 1, False, .0)
 
     def forward(self, q):
-        w_emb, sentence_embedding = self.w_emb(q, output_all_encoded_layers=False)  # [batch, q_len, q_dim]
+        w_emb = self.w_emb(q, output_hidden_states=False).last_hidden_state  # [batch, q_len, q_dim]
         q_emb = self.rnn.forward_all(self.w_emb_(w_emb))
         return q_emb

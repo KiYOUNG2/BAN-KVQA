@@ -15,7 +15,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from konlpy.tag import Mecab, Kkma
-from pytorch_pretrained_bert import BertTokenizer
+from transformers import AutoTokenizer
 
 import utils
 
@@ -164,7 +164,7 @@ class KvqaFeatureDataset(Dataset):
         self.entries, self.type2idx, self.idx2type = _load_kvqa(dataroot, split, self.img_id2idx)
 
         if tokenizer == 'sp':
-            self.tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased', do_lower_case=False)
+            self.tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large', do_lower_case=False)
             self.dictionary = self.tokenizer.vocab
         elif tokenizer == 'mecab':
             self.tokenizer = Mecab()
