@@ -77,7 +77,7 @@ if __name__ == '__main__':
         print('loading %s' % args.input)
         model_data = torch.load(args.input)
         model.load_state_dict(model_data.get('model_state', model_data))
-        optim = torch.optim.Adamax(filter(lambda p: p.requires_grad, model.parameters()))
+        optim = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()))
         optim.load_state_dict(model_data.get('optimizer_state', model_data))
         epoch = model_data['epoch'] + 1
 
