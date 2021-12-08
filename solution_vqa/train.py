@@ -6,7 +6,7 @@ import os
 import time
 import torch
 import torch.nn as nn
-import utils
+import utils as utils
 
 
 def instance_bce_with_logits(logits, labels, reduction='mean'):

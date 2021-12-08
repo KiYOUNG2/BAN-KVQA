@@ -8,7 +8,7 @@ This code is written by Jin-Hwa Kim.
 import torch.nn as nn
 from transformers import PreTrainedModel, AutoModel, AutoConfig
 from attention import BiAttention
-from language_model import RnnQuestionEmbedding, BertRnnQuestionEmbedding
+from solution_vqa.language_model import RnnQuestionEmbedding, BertRnnQuestionEmbedding
 from classifier import SimpleClassifier
 from fc import FCNet
 from bc import BCNet

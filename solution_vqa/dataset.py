@@ -17,7 +17,7 @@ from torch.utils.data import Dataset
 from konlpy.tag import Mecab, Kkma
 from transformers import AutoTokenizer
 
-import utils
+import solution_vqa.utils as utils
 
 
 class Dictionary(object):
