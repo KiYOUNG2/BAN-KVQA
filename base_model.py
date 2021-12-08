@@ -6,7 +6,7 @@ https://arxiv.org/abs/1805.07932
 This code is written by Jin-Hwa Kim.
 """
 import torch.nn as nn
-from transformers import PretrainedModel, AutoModel, AutoConfig
+from transformers import PreTrainedModel, AutoModel, AutoConfig
 from attention import BiAttention
 from language_model import RnnQuestionEmbedding, BertRnnQuestionEmbedding
 from classifier import SimpleClassifier
@@ -40,7 +40,7 @@ class BanModel(nn.Module):
 
         return: logits, not probs
         """
-        if isinstance(self.q_emb, PretrainedModel):
+        if isinstance(self.q_emb, PreTrainedModel):
             q_emb = self.q_emb(q, output_hidden_states=False).last_hidden_state  # [batch, q_len, q_dim]
         else:
             q_emb = self.q_emb(q)
@@ -83,7 +83,7 @@ def build_ban(dataset, num_hid, op='', gamma=4, q_emb_type='bert', on_do_q=False
         q_dim = num_hid
 
     if not finetune_q: # Freeze question embedding
-        if isinstance(q_emb, PretrainedModel):
+        if isinstance(q_emb, PreTrainedModel):
             for p in q_emb.parameters():
                 p.requires_grad_(False)
         else:
