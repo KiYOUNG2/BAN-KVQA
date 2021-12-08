@@ -164,7 +164,7 @@ class KvqaFeatureDataset(Dataset):
         self.entries, self.type2idx, self.idx2type = _load_kvqa(dataroot, split, self.img_id2idx)
 
         if tokenizer == 'sp':
-            self.tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large', do_lower_case=False)
+            self.tokenizer = AutoTokenizer.from_pretrained('klue/roberta-base', do_lower_case=False)
             self.dictionary = self.tokenizer.vocab
         elif tokenizer == 'mecab':
             self.tokenizer = Mecab()
@@ -176,7 +176,7 @@ class KvqaFeatureDataset(Dataset):
         self.v_dim = self.features.size(1)
         self.s_dim = self.spatials.size(1)
 
-    def tokenize(self, max_length=14):
+    def tokenize(self, max_length=16): # max_length=14
         """Tokenizes the questions.
 
         This will add q_token in each entry of the dataset.
@@ -191,7 +191,7 @@ class KvqaFeatureDataset(Dataset):
                     padding = [self.dictionary.padding_idx] * (max_length - len(tokens))
                     tokens = tokens + padding
             elif hasattr(self.tokenizer, 'tokenize'):
-                tokens = self.tokenizer.tokenize(entry['question'])
+                tokens = self.tokenizer.tokenize(entry['question'], add_special_tokens=True)
                 tokens = [self.dictionary[token] for token in tokens[:max_length]]
                 if len(tokens) < max_length:
                     # Note here we pad in front of the sentence
