@@ -66,8 +66,8 @@ class BanModel(nn.Module):
 
 def build_ban(dataset, num_hid, op='', gamma=4, q_emb_type='bert', on_do_q=False, finetune_q=False):
     if 'bert' in q_emb_type:
-        model_config = AutoConfig.from_pretrained('klue/roberta-large', output_hidden_states=False)
-        q_emb = AutoModel.from_pretrained('klue/roberta-large', config=model_config)
+        model_config = AutoConfig.from_pretrained('klue/roberta-base', output_hidden_states=False)
+        q_emb = AutoModel.from_pretrained('klue/roberta-base', config=model_config)
         q_dim = q_emb.config.hidden_size
     elif 'rg' in q_emb_type:
         w_dim = 100
