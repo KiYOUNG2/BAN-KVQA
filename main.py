@@ -20,7 +20,7 @@ from registry import dictionary_dict
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=20)
-    parser.add_argument('--num_hid', type=int, default=1024) # basic : 512, bert : (base : 768, large : 1024)
+    parser.add_argument('--num_hid', type=int, default=768) # basic : 512, bert : (base : 768, large : 1024)
     parser.add_argument('--dataroot', type=str, default='data')
     parser.add_argument('--model', type=str, default='ban')
     parser.add_argument('--q_emb', type=str, default='bertrnn', choices=dictionary_dict.keys()) # bert, bertrnn
@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--finetune_q', action='store_true', help='finetune question embedding?')
     parser.add_argument('--on_do_q', action='store_true', help='turn on dropout of question embedding?')
     parser.add_argument('--input', type=str, default=None)
-    parser.add_argument('--output', type=str, default='saved_models/ban-kvqa-bertrnn')
+    parser.add_argument('--output', type=str, default='saved_models/ban-kvqa-bertrnn-fixsptoken')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--seed', type=int, default=1204, help='random seed')
     args = parser.parse_args()
