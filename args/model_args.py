@@ -82,5 +82,51 @@ class ModelHeadArguments(ModelingArguments):
 
 
 @dataclass
-class MrcModelArguments(ModelHeadArguments):
+class VQAArguments(ModelHeadArguments):
+    num_classes: int = field(
+        default=2423,
+        metadata={
+            "help": "Number of answer candidates"
+        },
+    )
+    v_dim: int = field(
+        default=2048,
+        metadata={
+            "help": "Number of visual feature dimension"
+        },
+    )
+    num_hid: int = field(
+        default=768,
+        metadata={
+            "help": "Number of hidden dimension"
+        },
+    )
+    op: str = field(
+        default="",
+        metadata={
+            "help": "Concatenate Word Embedding, if 'c', concatenate freeze embedding with fine-tuned word embedding"
+        },
+    )
+    gamma: int = field(
+        default=8,
+        metadata={
+            "help": "The number of glimpses(attention heads)"
+        },
+    )
+    finetune_q: bool = field(
+        default=True,
+        metadata={
+            "help": "finetune question embedding?"
+        },
+    )
+    on_do_q: bool = field(
+        default=True,
+        metadata={
+            "help": "turn on dropout of question embedding?"
+        },
+    )
+
+
+@dataclass
+class MrcModelArguments(VQAArguments):
     pass
