@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from fc import FCNet
+from .modules.fc import FCNet
 
 
 class WordEmbedding(nn.Module):
@@ -115,7 +115,9 @@ class BertRnnQuestionEmbedding(nn.Module):
         w_dim = bert.config.hidden_size
         self.w_emb = bert
         self.w_emb_ = FCNet([w_dim, rot_dim], 'ReLU', 0.)
-        self.rnn = QuestionEmbedding(rot_dim if 'c' not in op else rot_dim * 2, q_dim, 1, False, .0)
+        self.rnn = QuestionEmbedding(
+                                rot_dim if (op is None) or ('c' not in op)
+                                else rot_dim * 2, q_dim, 1, False, .0)
 
     def forward(self, q):
         w_emb = self.w_emb(q, output_hidden_states=False).last_hidden_state  # [batch, q_len, q_dim]
