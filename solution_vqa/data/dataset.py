@@ -234,7 +234,6 @@ class KvqaFeatureDataset(Dataset):
         spatials = self.spatials[self.pos_boxes[entry['image']][0]:self.pos_boxes[entry['image']][1], :]
 
         question = entry['q_token']
-        # question = entry['question']
         question_id = entry['question_id']
         answer = entry['answer']
 

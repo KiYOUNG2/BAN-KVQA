@@ -8,6 +8,7 @@ import errno
 import os
 import re
 import random
+import time
 import collections
 import numpy as np
 import operator
@@ -130,6 +131,40 @@ def trim_collate(batch):
     raise TypeError((error_msg.format(type(batch[0]))))
 
 
+def set_seed(seed: int = 42):
+    """Seed fixer (random, numpy, torch)
+    Args:
+        seed (:obj:`int`): The seed to set.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    if is_torch_available():
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def timerfunc(func):
+    """
+    A timer decorator
+    """
+    def function_timer(*args, **kwargs):
+        """
+        A nested function for timing other functions
+        """
+        start = time.time()
+        value = func(*args, **kwargs)
+        end = time.time()
+        runtime = end - start
+        msg = "The runtime for {func} took {time} seconds to complete"
+        print(msg.format(func=func.__name__,
+                         time=runtime))
+        return value
+    return function_timer
+
+
 class Logger(object):
     def __init__(self, output_name):
         dirname = os.path.dirname(output_name)
@@ -157,17 +192,3 @@ class Logger(object):
         self.log_file.write(msg + '\n')
         self.log_file.flush()
         print(msg)
-
-def set_seed(seed: int = 42):
-    """Seed fixer (random, numpy, torch)
-    Args:
-        seed (:obj:`int`): The seed to set.
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    if is_torch_available():
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)  # if use multi-GPU
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False

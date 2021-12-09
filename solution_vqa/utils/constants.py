@@ -16,7 +16,9 @@ DETECTOR_MAX_BOXES = 30
 DETECTOR_CONF_THRESH = 0.4
 
 # VQA Model
-VQA_CONFIG_FILE = './configs/vqa.yaml'
-VQA_WEIGHT_FILE = './saved_models/ban-kvqa-roberta-base-rnn/ban-kvqa-roberta-base-rnn.pth'
+# VQA_CONFIG_FILE = './configs/vqa_roberta-base-rnn.yaml'
+VQA_CONFIG_FILE = './configs/vqa_fasttext-pkb.yaml'
+VQA_BERT_WEIGHT_FILE = './saved_models/ban-kvqa-roberta-base-rnn/ban-kvqa-roberta-base-rnn.pth'
+VQA_FASTTEXT_WEIGHT_FILE = './saved_models/ban-kvqa-fasttext-pkb/ban-kvqa-fasttext-pkb.pth'
 LABEL2ANS_FILE = './data/cache/trainval_label2ans.kvqa.pkl'
 ANS2LABEL_FILE = './data/cache/trainval_ans2label.kvqa.pkl'

@@ -17,9 +17,9 @@ class WordEmbedding(nn.Module):
     """
     def __init__(self, ntoken, emb_dim, dropout, op):
         super(WordEmbedding, self).__init__()
-        self.op = op
+        self.op = '' if op is None else op
         self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
-        if 'c' in op:
+        if 'c' in self.op:
             self.emb_ = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
             self.emb_.weight.requires_grad = False # fixed
         self.dropout = nn.Dropout(dropout)
@@ -100,6 +100,7 @@ class QuestionEmbedding(nn.Module):
 class RnnQuestionEmbedding(nn.Module):
     def __init__(self, ntoken, w_dim, q_dim, op):
         super(RnnQuestionEmbedding, self).__init__()
+        op = '' if op is None else op
         self.w_emb = WordEmbedding(ntoken, w_dim, .0, op)
         self.rnn = QuestionEmbedding(w_dim if 'c' not in op else w_dim * 2, q_dim, 1, False, .0)
 

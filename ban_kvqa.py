@@ -1,4 +1,3 @@
-import glob
 import os
 import pickle
 import requests
@@ -25,9 +24,12 @@ from models.bua import add_bottom_up_attention_config
 from models.bua.layers.nms import nms
 
 # Vision-Language Model
-from solution_vqa.model import base_model
-from solution_vqa.utils import constants as C
+from konlpy.tag import Kkma
 from solution.qa import QABase
+from solution_vqa.model import base_model
+from solution_vqa.utils import dictionary_dict
+from solution_vqa.utils import constants as C
+from solution_vqa.data.dataset import Dictionary
 
 from args import (
     HfArgumentParser,
@@ -45,7 +47,6 @@ class VQA(QABase):
         super().__init__(args=None)
         self._init_detector()
         self._init_vqa()
-
     def answer(
         self,
         query: str,
@@ -59,8 +60,7 @@ class VQA(QABase):
             v_features = sample[C.VISION_COLUMN_NAME].to(self.device)
             spatials   = sample[C.SPATIAL_COLUMN_NAME].to(self.device)
             question   = sample[C.QUESTION_COLUMN_NAME].to(self.device)
-            answerable = sample[C.ANSWERABLE_COLUMN_NAME].to(self.device).unsqueeze(-1).float()
-            pred, _, _ = self.vqa_model(v_features, spatials, question, 'sample', answerable)
+            pred, _, _ = self.vqa_model(v_features, spatials, question, 'sample', None)
             idx = torch.argmax(pred).item()
             pred_class = self.vqa_label2ans[idx]
         
@@ -104,17 +104,17 @@ class VQA(QABase):
             img (Union[str, Image.Image]): image url string or PIL.Image.Image object
         """
 
-        if type(img) == str:
-            print('img from url')
-            open_input = requests.get(img).content
-            image_nparray = np.asarray(bytearray(open_input), dtype=np.uint8)
-            return cv2.imdecode(image_nparray, cv2.IMREAD_COLOR)
+        if type(img).__mro__[-2] == Image.Image:
+            return cv2.cvtColor(np.array(img, dtype=np.uint8), cv2.COLOR_RGB2BGR)
 
-        elif type(img).__mro__[-2] == Image.Image:
-            print('img from PIL')
-            image_nparray = np.array(img)
-            return cv2.cvtColor(image_nparray, cv2.COLOR_RGB2BGR)
-
+        elif type(img) == str:
+            return cv2.imdecode(
+                np.asarray(
+                    bytearray(requests.get(img).content),
+                    dtype=np.uint8
+                    ),
+                cv2.IMREAD_COLOR
+                )
     def _detect_img(self, img: Union[str, Image.Image]):
         """Detect Object from input image url
 
@@ -133,14 +133,14 @@ class VQA(QABase):
         feats = features_pooled[0].cpu()
         attr_scores = attr_scores[0].cpu()
 
-        max_conf = torch.zeros((scores.shape[0])).to(scores.device)
+        max_conf = torch.zeros((scores.shape[0]), device=scores.device)
         for cls_ind in range(1, scores.shape[1]):
                 cls_scores = scores[:, cls_ind]
                 keep = nms(dets, cls_scores, 0.3)
                 max_conf[keep] = torch.where(cls_scores[keep] > max_conf[keep],
                                             cls_scores[keep],
                                             max_conf[keep])
-                    
+
         keep_boxes = torch.nonzero(max_conf >= C.DETECTOR_CONF_THRESH).flatten()
         if len(keep_boxes) < C.DETECTOR_MIN_BOXES:
             keep_boxes = torch.argsort(max_conf, descending=True)[:C.DETECTOR_MIN_BOXES]
@@ -157,7 +157,6 @@ class VQA(QABase):
             'image_h':np.size(im, 0),
             'image_w':np.size(im, 1),
             }
-
     def _init_vqa(self):
         
         # setup configs
@@ -170,18 +169,44 @@ class VQA(QABase):
             ]
         )
         args = parser.parse_yaml_file(yaml_file=os.path.abspath(C.VQA_CONFIG_FILE))
-        _, model_args, _, _ = args
+        data_args, model_args, _, _ = args
 
         # load answer label dict
         with open(C.LABEL2ANS_FILE, 'rb') as f:
             self.vqa_label2ans = pickle.load(f)
+            # convert list to dict for speed
+            self.vqa_label2ans = {k:v for k, v in enumerate(self.vqa_label2ans)}
+
+        # Load dictionary file
+        if 'bert' in model_args.architectures:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
+            self.dictionary = self.tokenizer.vocab
+            NTOKEN = None
+            VQA_WEIGHT_FILE = C.VQA_BERT_WEIGHT_FILE
+
+        elif 'fasttext-pkb' in model_args.architectures:
+            dictionary_path = os.path.join(
+                                    data_args.dataset_path,
+                                    dictionary_dict[model_args.architectures]['dict']
+                                    )
+            self.dictionary = Dictionary.load_from_file(dictionary_path)
+            self.tokenizer = Kkma()
+
+            # To speed up Kkma tokenizer, Do tokenize "Dummy input"
+            self.tokenizer.morphs("Dummy input")
+
+            NTOKEN = self.dictionary.ntoken
+            VQA_WEIGHT_FILE = C.VQA_FASTTEXT_WEIGHT_FILE
+
+        else:
+            raise ValueError("Invaild ModelArguments `architectures` argument type: bert, bertrnn, fasttext-pkb")
 
         # Built Model
         self.vqa_model = getattr(base_model, 'build_ban')(
                             model_args.num_classes,
                             model_args.v_dim,
                             model_args.num_hid,
-                            None,
+                            NTOKEN,
                             model_args.op,
                             model_args.gamma,
                             model_args.architectures,
@@ -189,10 +214,15 @@ class VQA(QABase):
                             model_args.finetune_q
                         ).to(self.device)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(self.vqa_model.q_emb.w_emb.config._name_or_path)
+        if 'bert' not in model_args.architectures:
+            self.vqa_model.q_emb.w_emb.init_embedding(os.path.join(
+                                    data_args.dataset_path,
+                                    dictionary_dict[model_args.architectures]['embedding']
+                                    )
+                                    )
 
         # Load Checkpoint
-        model_data = torch.load(C.VQA_WEIGHT_FILE)
+        model_data = torch.load(VQA_WEIGHT_FILE)
 
         model_state = OrderedDict()
         for k, v in model_data.get('model_state', model_data).items():
@@ -200,15 +230,34 @@ class VQA(QABase):
         self.vqa_model.load_state_dict(model_state)
         del model_state
         self.vqa_model.eval()
-        
-    def _tokenize_question(self, question:str, max_length=16):
-        return self.tokenizer.encode(
+    def _tokenize_question(self, question:str, max_length=16) -> torch.Tensor:
+        """Tokenizes the questions.
+
+        Args:
+            question (str): User's question
+            max_length (int, optional): Max token sequence length. Defaults to 16 for bert, 14 for fasttext
+
+        Returns:
+            torch.Tensor: Token sequence(shape : (1, 16) or (1, 14)) 
+        """
+
+        if hasattr(self.tokenizer, 'tokenize'):
+            return self.tokenizer.encode(
                 question,
                 max_length=max_length,
                 padding='max_length',
                 return_tensors='pt',
                 add_special_tokens=True
                 )
+        elif hasattr(self.tokenizer, 'morphs'):
+            max_length -= 2
+            tokens = self.tokenizer.morphs(question.replace('.', ''))
+            tokens = [self.dictionary.word2idx[token] for token in tokens[:max_length]]
+            if len(tokens) < max_length:
+                # Note here we pad in front of the sentence
+                padding = [self.dictionary.padding_idx] * (max_length - len(tokens))
+                tokens = tokens + padding
+            return torch.tensor([tokens])
 
     def _preprocess_query(self, question:str, img:Union[str, Image.Image]):
         """Preprocess question and image for VQA Model
@@ -224,8 +273,6 @@ class VQA(QABase):
             "v_feature"   : img_features['x'].unsqueeze(0),
             "spatials"    : img_features['bbox'].unsqueeze(0),
             "question"    : question,
-            "answerable"  : torch.tensor([0.0]).unsqueeze(0),
-            "answer_type" : torch.tensor([-1]).unsqueeze(0),
             }
 
 
