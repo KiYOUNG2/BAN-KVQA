@@ -149,8 +149,8 @@ def evaluate(model, dataloader):
     n_answer_type = torch.zeros(len(dset.idx2type))
     score_answer_type = torch.zeros(len(dset.idx2type))
     entropy = None
-    if hasattr(model.module, 'glimpse'):
-        entropy = torch.Tensor(model.module.glimpse).zero_().cuda()
+    if hasattr(model, 'glimpse'):
+        entropy = torch.Tensor(model.glimpse).zero_().cuda()
 
     for i, (v, b, q, a, c, at) in enumerate(dataloader):
         v = v.cuda()
@@ -175,8 +175,8 @@ def evaluate(model, dataloader):
 
         upper_bound += (a.max(1)[0]).sum().item()
         num_data += pred.size(0)
-        if att is not None and 0 < model.module.glimpse:
-            entropy += calc_entropy(att.data)[:model.module.glimpse]
+        if att is not None and 0 < model.glimpse:
+            entropy += calc_entropy(att.data)[:model.glimpse]
 
     score = score / len(dataloader.dataset)
     zcore = zcore / len(dataloader.dataset)
