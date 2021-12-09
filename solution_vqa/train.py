@@ -6,8 +6,7 @@ import os
 import time
 import torch
 import torch.nn as nn
-import utils as utils
-
+from .utils import utils
 
 def instance_bce_with_logits(logits, labels, reduction='mean'):
     assert logits.dim() == 2
