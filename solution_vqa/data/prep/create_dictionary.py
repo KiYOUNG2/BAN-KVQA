@@ -7,8 +7,8 @@ import re
 import numpy as np
 from konlpy.tag import Mecab, Kkma
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from data.dataset import Dictionary
-from utils.registry import dictionary_dict
+from ..dataset import Dictionary
+from ...utils.registry import dictionary_dict
 
 def tokenize_kvqa(s):
     return s.replace('.', ' ').replace('  ', ' ')
