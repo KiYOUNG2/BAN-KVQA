@@ -7,6 +7,7 @@ from __future__ import print_function
 import errno
 import os
 import re
+import random
 import collections
 import numpy as np
 import operator
@@ -15,6 +16,7 @@ import torch
 import torch.nn.functional as F
 from torch._six import string_classes
 from torch.utils.data.dataloader import default_collate
+from transformers import is_torch_available
 
 
 EPS = 1e-7
@@ -156,3 +158,16 @@ class Logger(object):
         self.log_file.flush()
         print(msg)
 
+def set_seed(seed: int = 42):
+    """Seed fixer (random, numpy, torch)
+    Args:
+        seed (:obj:`int`): The seed to set.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    if is_torch_available():
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False

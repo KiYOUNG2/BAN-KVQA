@@ -6,19 +6,14 @@ https://arxiv.org/abs/1805.07932
 This code is written by Jin-Hwa Kim.
 """
 import torch.nn as nn
-from pytorch_pretrained_bert.modeling import BertModel
-from attention import BiAttention
-from language_model import RnnQuestionEmbedding, BertRnnQuestionEmbedding
-from classifier import SimpleClassifier
-from fc import FCNet
-from bc import BCNet
-from counting import Counter
+from transformers import PreTrainedModel, AutoModel, AutoConfig
+from .language_model import RnnQuestionEmbedding, BertRnnQuestionEmbedding
+from .modules import BiAttention, SimpleClassifier, FCNet, BCNet, Counter
 
 
 class BanModel(nn.Module):
-    def __init__(self, dataset, q_emb, v_att, b_net, q_prj, c_prj, classifiers, counter, op, glimpse):
+    def __init__(self, q_emb, v_att, b_net, q_prj, c_prj, classifiers, counter, op, glimpse):
         super(BanModel, self).__init__()
-        self.dataset = dataset
         self.op = op
         self.glimpse = glimpse
         self.q_emb = q_emb
@@ -40,8 +35,8 @@ class BanModel(nn.Module):
 
         return: logits, not probs
         """
-        if isinstance(self.q_emb, BertModel):
-            q_emb, sentence_embedding = self.q_emb(q, output_all_encoded_layers=False)  # [batch, q_len, q_dim]
+        if isinstance(self.q_emb, PreTrainedModel):
+            q_emb = self.q_emb(q, output_hidden_states=False).last_hidden_state  # [batch, q_len, q_dim]
         else:
             q_emb = self.q_emb(q)
         boxes = b[:, :, :4].transpose(1, 2)
@@ -64,25 +59,25 @@ class BanModel(nn.Module):
         return logits, logitz, att
 
 
-def build_ban(dataset, num_hid, op='', gamma=4, q_emb_type='bert', on_do_q=False, finetune_q=False):
+def build_ban(num_classes, v_dim, num_hid, num_tokens=None, op='', gamma=4, q_emb_type='bert', on_do_q=False, finetune_q=False):
     if 'bert' in q_emb_type:
-        q_emb = BertModel.from_pretrained('bert-base-multilingual-cased')
-        q_dim = 768
+        model_config = AutoConfig.from_pretrained('klue/roberta-base', output_hidden_states=False)
+        q_emb = AutoModel.from_pretrained('klue/roberta-base', config=model_config)
+        q_dim = q_emb.config.hidden_size
     elif 'rg' in q_emb_type:
         w_dim = 100
         q_dim = num_hid
-        q_emb = RnnQuestionEmbedding(dataset.dictionary.ntoken, w_dim, q_dim, op)
+        q_emb = RnnQuestionEmbedding(num_tokens, w_dim, q_dim, op)
     elif 'pkb' in q_emb_type:
         w_dim = 200
         q_dim = num_hid
-        q_emb = RnnQuestionEmbedding(dataset.dictionary.ntoken, w_dim, q_dim, op)
-
+        q_emb = RnnQuestionEmbedding(num_tokens, w_dim, q_dim, op)
     if 'bertrnn' in q_emb_type:
         q_emb = BertRnnQuestionEmbedding(q_emb, 200, num_hid, op)
         q_dim = num_hid
 
     if not finetune_q: # Freeze question embedding
-        if isinstance(q_emb, BertModel):
+        if isinstance(q_emb, PreTrainedModel):
             for p in q_emb.parameters():
                 p.requires_grad_(False)
         else:
@@ -93,16 +88,16 @@ def build_ban(dataset, num_hid, op='', gamma=4, q_emb_type='bert', on_do_q=False
             if isinstance(m, nn.Dropout):
                 m.p = 0.
 
-    v_att = BiAttention(dataset.v_dim, q_dim, num_hid, gamma)
+    v_att = BiAttention(v_dim, q_dim, num_hid, gamma)
     b_net = []
     q_prj = []
     c_prj = []
     objects = 10  # minimum number of boxes
     for i in range(gamma):
-        b_net.append(BCNet(dataset.v_dim, q_dim, num_hid, None, k=1))
+        b_net.append(BCNet(v_dim, q_dim, num_hid, None, k=1))
         q_prj.append(FCNet([num_hid, q_dim], '', .2))
         c_prj.append(FCNet([objects + 1, q_dim], 'ReLU', .0))
-    classifiers = [SimpleClassifier(q_dim, num_hid * 2, dataset.num_ans_candidates, .5),
+    classifiers = [SimpleClassifier(q_dim, num_hid * 2, num_classes, .5),
                    SimpleClassifier(q_dim, num_hid * 2, 1, .5)]
     counter = Counter(objects)
-    return BanModel(dataset, q_emb, v_att, b_net, q_prj, c_prj, classifiers, counter, op, gamma)
+    return BanModel(q_emb, v_att, b_net, q_prj, c_prj, classifiers, counter, op, gamma)

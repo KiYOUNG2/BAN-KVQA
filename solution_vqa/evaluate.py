@@ -11,11 +11,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from dataset import KvqaFeatureDataset, Dictionary
-import base_model
-from train import evaluate
-import utils
-from registry import dictionary_dict
+from data.dataset import KvqaFeatureDataset, Dictionary
+import model.base_model as base_model
+from solution_vqa.train import evaluate
+from .utils import utils
+from .utils.registry import dictionary_dict
+from .utils.constants import *
 
 
 def parse_args():
