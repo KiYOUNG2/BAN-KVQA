@@ -169,8 +169,8 @@ class VQA(QABase):
                 MrcProjectArguments
             ]
         )
-        args = parser.parse_yaml_file(yaml_file=os.path.abspath(C.VQA_CONFIG_FILE_PATH))
-        _, model_args, training_args, _ = args
+        args = parser.parse_yaml_file(yaml_file=os.path.abspath(C.VQA_CONFIG_FILE))
+        _, model_args, _, _ = args
 
         # load answer label dict
         with open(C.LABEL2ANS_FILE, 'rb') as f:
@@ -192,9 +192,7 @@ class VQA(QABase):
         self.tokenizer = AutoTokenizer.from_pretrained(self.vqa_model.q_emb.w_emb.config._name_or_path)
 
         # Load Checkpoint
-        list_of_files = glob.glob(os.path.join(training_args.output_dir, '*.pth'))
-        latest_file = max(list_of_files, key=os.path.getctime) if len(list_of_files) >= 1 else False
-        model_data = torch.load(latest_file)
+        model_data = torch.load(C.VQA_WEIGHT_FILE)
 
         model_state = OrderedDict()
         for k, v in model_data.get('model_state', model_data).items():
