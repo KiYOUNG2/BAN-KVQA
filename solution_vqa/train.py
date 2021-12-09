@@ -33,8 +33,8 @@ def compute_zcore_with_logits(logits, labels):
     return scores
 
 
-def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoch=0, logger=None, save_one_ckpt=True):
-    lr_default = 1e-3 if eval_loader is not None else 7e-4
+def train(model, train_loader, eval_loader, num_epochs, output, lr=1e-3, opt=None, s_epoch=0, logger=None, save_one_ckpt=True):
+    lr_default = lr if eval_loader is not None else 7e-4
     lr_decay_step = 2
     lr_decay_rate = .25
     lr_decay_epochs = range(10,20,lr_decay_step) if eval_loader is not None else range(10,20,lr_decay_step)
