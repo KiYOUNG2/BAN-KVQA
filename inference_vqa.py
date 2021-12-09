@@ -175,8 +175,6 @@ class VQA(QABase):
         # load answer label dict
         with open(C.LABEL2ANS_FILE, 'rb') as f:
             self.vqa_label2ans = pickle.load(f)
-        with open(C.ANS2LABEL_FILE, 'rb') as f:
-            self.vqa_ans2label = pickle.load(f)
 
         # Built Model
         self.vqa_model = getattr(base_model, 'build_ban')(
