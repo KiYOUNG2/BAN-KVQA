@@ -7,6 +7,7 @@ import time
 import torch
 import torch.nn as nn
 from .utils import utils
+from tqdm import tqdm
 
 def instance_bce_with_logits(logits, labels, reduction='mean'):
     assert logits.dim() == 2
@@ -55,7 +56,7 @@ def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoc
 
     model_path = os.path.join(output, 'model_epoch-1.pth')
 
-    for epoch in range(s_epoch, num_epochs):
+    for epoch in tqdm(range(s_epoch, num_epochs)):
         total_loss = 0
         train_score = 0
         train_zcore = 0
@@ -74,7 +75,7 @@ def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoc
         else:
             logger.write('lr: %.4f' % optim.param_groups[0]['lr'])
 
-        for i, (v, b, q, a, c, at) in enumerate(train_loader):
+        for i, (v, b, q, a, c, at) in tqdm(enumerate(train_loader)):
             v = v.cuda()
             b = b.cuda()
             q = q.cuda()
