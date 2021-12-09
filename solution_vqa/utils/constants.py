@@ -18,4 +18,4 @@ DETECTOR_CONF_THRESH = 0.4
 # VQA Model
 VQA_CONFIG_FILE_PATH = './configs/vqa.yaml'
 LABEL2ANS_FILE = './data/cache/trainval_label2ans.kvqa.pkl'
-ANS2LABEL_FILE = './data/cache/trainval_label2ans.kvqa.pkl'
+ANS2LABEL_FILE = './data/cache/trainval_ans2label.kvqa.pkl'
