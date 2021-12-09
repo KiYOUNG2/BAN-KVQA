@@ -7,7 +7,7 @@ This code is written by Jin-Hwa Kim.
 """
 import torch.nn as nn
 from torch.nn.utils.weight_norm import weight_norm
-from bc import BCNet
+from .bc import BCNet
 
 
 class BiAttention(nn.Module):

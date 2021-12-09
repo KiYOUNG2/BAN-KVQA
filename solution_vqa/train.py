@@ -6,8 +6,8 @@ import os
 import time
 import torch
 import torch.nn as nn
-import utils
-
+from .utils import utils
+from tqdm import tqdm
 
 def instance_bce_with_logits(logits, labels, reduction='mean'):
     assert logits.dim() == 2
@@ -33,8 +33,8 @@ def compute_zcore_with_logits(logits, labels):
     return scores
 
 
-def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoch=0, logger=None, save_one_ckpt=True):
-    lr_default = 1e-3 if eval_loader is not None else 7e-4
+def train(model, train_loader, eval_loader, num_epochs, output, lr=1e-3, opt=None, s_epoch=0, logger=None, save_one_ckpt=True):
+    lr_default = lr if eval_loader is not None else 7e-4
     lr_decay_step = 2
     lr_decay_rate = .25
     lr_decay_epochs = range(10,20,lr_decay_step) if eval_loader is not None else range(10,20,lr_decay_step)
@@ -56,7 +56,7 @@ def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoc
 
     model_path = os.path.join(output, 'model_epoch-1.pth')
 
-    for epoch in range(s_epoch, num_epochs):
+    for epoch in tqdm(range(s_epoch, num_epochs)):
         total_loss = 0
         train_score = 0
         train_zcore = 0
@@ -75,7 +75,7 @@ def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoc
         else:
             logger.write('lr: %.4f' % optim.param_groups[0]['lr'])
 
-        for i, (v, b, q, a, c, at) in enumerate(train_loader):
+        for i, (v, b, q, a, c, at) in tqdm(enumerate(train_loader)):
             v = v.cuda()
             b = b.cuda()
             q = q.cuda()
@@ -149,8 +149,8 @@ def evaluate(model, dataloader):
     n_answer_type = torch.zeros(len(dset.idx2type))
     score_answer_type = torch.zeros(len(dset.idx2type))
     entropy = None
-    if hasattr(model.module, 'glimpse'):
-        entropy = torch.Tensor(model.module.glimpse).zero_().cuda()
+    if hasattr(model, 'glimpse'):
+        entropy = torch.Tensor(model.glimpse).zero_().cuda()
 
     for i, (v, b, q, a, c, at) in enumerate(dataloader):
         v = v.cuda()
@@ -175,8 +175,8 @@ def evaluate(model, dataloader):
 
         upper_bound += (a.max(1)[0]).sum().item()
         num_data += pred.size(0)
-        if att is not None and 0 < model.module.glimpse:
-            entropy += calc_entropy(att.data)[:model.module.glimpse]
+        if att is not None and 0 < model.glimpse:
+            entropy += calc_entropy(att.data)[:model.glimpse]
 
     score = score / len(dataloader.dataset)
     zcore = zcore / len(dataloader.dataset)

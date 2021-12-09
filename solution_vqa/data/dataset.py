@@ -16,8 +16,7 @@ import torch
 from torch.utils.data import Dataset
 from konlpy.tag import Mecab, Kkma
 from transformers import AutoTokenizer
-
-import utils
+from ..utils import utils
 
 
 class Dictionary(object):
@@ -136,13 +135,14 @@ def _load_kvqa(dataroot, name, img_id2val):
 
 
 class KvqaFeatureDataset(Dataset):
-    def __init__(self, split, dictionary, dataroot='data', tokenizer='sp'):
+    def __init__(self, split, dictionary, max_length=16, dataroot='../data', tokenizer='sp'):
         super(KvqaFeatureDataset, self).__init__()
         assert split in ['train', 'val', 'test']
         self.dataroot = dataroot
+        self.max_length = max_length
 
-        ans2label_path = os.path.join(dataroot, 'cache', 'trainval_ans2label.kvqa.pkl')
-        label2ans_path = os.path.join(dataroot, 'cache', 'trainval_label2ans.kvqa.pkl')
+        ans2label_path = os.path.join(self.dataroot, 'cache', 'trainval_ans2label.kvqa.pkl')
+        label2ans_path = os.path.join(self.dataroot, 'cache', 'trainval_label2ans.kvqa.pkl')
         self.ans2label = cPickle.load(open(ans2label_path, 'rb'))
         self.label2ans = cPickle.load(open(label2ans_path, 'rb'))
         self.num_ans_candidates = len(self.ans2label)
@@ -150,10 +150,10 @@ class KvqaFeatureDataset(Dataset):
         self.dictionary = dictionary
 
         self.img_id2idx = cPickle.load(
-            open(os.path.join(dataroot, '%s_imgid2idx.kvqa.pkl' % split),
+            open(os.path.join(self.dataroot, '%s_imgid2idx.kvqa.pkl' % split),
                  'rb'))
 
-        h5_path = os.path.join(dataroot, '%s_kvqa.hdf5' % split)
+        h5_path = os.path.join(self.dataroot, '%s_kvqa.hdf5' % split)
 
         print('loading features from h5 file')
         with h5py.File(h5_path, 'r') as hf:
@@ -161,7 +161,7 @@ class KvqaFeatureDataset(Dataset):
             self.spatials = np.array(hf.get('spatial_features'))
             self.pos_boxes = np.array(hf.get('pos_boxes'))
 
-        self.entries, self.type2idx, self.idx2type = _load_kvqa(dataroot, split, self.img_id2idx)
+        self.entries, self.type2idx, self.idx2type = _load_kvqa(self.dataroot, split, self.img_id2idx)
 
         if tokenizer == 'sp':
             self.tokenizer = AutoTokenizer.from_pretrained('klue/roberta-base', do_lower_case=False)
@@ -176,7 +176,7 @@ class KvqaFeatureDataset(Dataset):
         self.v_dim = self.features.size(1)
         self.s_dim = self.spatials.size(1)
 
-    def tokenize(self, max_length=16): # max_length=14
+    def tokenize(self): # max_length=14
         """Tokenizes the questions.
 
         This will add q_token in each entry of the dataset.
@@ -185,26 +185,26 @@ class KvqaFeatureDataset(Dataset):
         for entry in self.entries:
             if hasattr(self.tokenizer, 'morphs'):
                 tokens = self.tokenizer.morphs(entry['question'].replace('.', ''))
-                tokens = [self.dictionary.word2idx[token] for token in tokens[:max_length]]
-                if len(tokens) < max_length:
+                tokens = [self.dictionary.word2idx[token] for token in tokens[:self.max_length]]
+                if len(tokens) < self.max_length:
                     # Note here we pad in front of the sentence
-                    padding = [self.dictionary.padding_idx] * (max_length - len(tokens))
+                    padding = [self.dictionary.padding_idx] * (self.max_length - len(tokens))
                     tokens = tokens + padding
             elif hasattr(self.tokenizer, 'tokenize'):
                 tokens = self.tokenizer.tokenize(entry['question'], add_special_tokens=True)
-                tokens = [self.dictionary[token] for token in tokens[:max_length]]
-                if len(tokens) < max_length:
+                tokens = [self.dictionary[token] for token in tokens[:self.max_length]]
+                if len(tokens) < self.max_length:
                     # Note here we pad in front of the sentence
-                    padding = [self.dictionary['[PAD]']] * (max_length - len(tokens))
+                    padding = [self.dictionary['[PAD]']] * (self.max_length - len(tokens))
                     tokens = tokens + padding
             else:
                 tokens = self.tokenizer(entry['question'])
-                tokens = [self.dictionary(token) for token in tokens[:max_length]]
-                if len(tokens) < max_length:
+                tokens = [self.dictionary(token) for token in tokens[:self.max_length]]
+                if len(tokens) < self.max_length:
                     # Note here we pad in front of the sentence
-                    padding = [self.dictionary('[PAD]')] * (max_length - len(tokens))
+                    padding = [self.dictionary('[PAD]')] * (self.max_length - len(tokens))
                     tokens = tokens + padding
-            utils.assert_eq(len(tokens), max_length)
+            utils.assert_eq(len(tokens), self.max_length)
             entry['q_token'] = tokens
 
     def tensorize(self):
@@ -234,6 +234,7 @@ class KvqaFeatureDataset(Dataset):
         spatials = self.spatials[self.pos_boxes[entry['image']][0]:self.pos_boxes[entry['image']][1], :]
 
         question = entry['q_token']
+        # question = entry['question']
         question_id = entry['question_id']
         answer = entry['answer']
 
