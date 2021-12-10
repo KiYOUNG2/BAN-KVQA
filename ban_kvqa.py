@@ -25,7 +25,7 @@ from models.bua.layers.nms import nms
 
 # Vision-Language Model
 from konlpy.tag import Kkma
-from solution.qa import QABase
+
 from solution_vqa.model import base_model
 from solution_vqa.utils import dictionary_dict
 from solution_vqa.utils import constants as C
@@ -38,6 +38,22 @@ from args import (
     MrcTrainingArguments,
     MrcProjectArguments,
 )
+
+
+class QABase:
+    def __init__(self, args):
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
+            
+    def answer(
+        self,
+        query: str,
+        context: Union[Image.Image, Union[str, List[str]]]
+    ) -> Tuple[str, bool]: # str : answer, bool : answeralbe or not
+        """Return answer when the question is answerable"""
+        return NotImplemented
 
 
 class VQA(QABase):
@@ -250,7 +266,7 @@ class VQA(QABase):
                 add_special_tokens=True
                 )
         elif hasattr(self.tokenizer, 'morphs'):
-            max_length -= 2
+            # max_length -= 2
             tokens = self.tokenizer.morphs(question.replace('.', ''))
             tokens = [self.dictionary.word2idx[token] for token in tokens[:max_length]]
             if len(tokens) < max_length:
