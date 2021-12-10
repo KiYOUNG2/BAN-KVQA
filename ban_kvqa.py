@@ -109,7 +109,7 @@ class VQA(QABase):
 
         self.detector_model = DefaultTrainer.build_model(self.detecter_cfg)
         DetectionCheckpointer(self.detector_model, save_dir=self.detecter_cfg.OUTPUT_DIR).resume_or_load(
-            os.path.join(C.DETECTOR_ROOT_PATH + self.detecter_cfg.MODEL.WEIGHTS), resume=True
+            os.path.join(C.DETECTOR_ROOT_PATH, self.detecter_cfg.MODEL.WEIGHTS), resume=True
         )
         self.detector_model.eval()
 
@@ -186,6 +186,7 @@ class VQA(QABase):
         )
         args = parser.parse_yaml_file(yaml_file=os.path.abspath(C.VQA_CONFIG_FILE))
         data_args, model_args, _, _ = args
+        data_args.dataset_path = C.get_abs_path(C.PROJECT_BASE_PATH, data_args.dataset_path)
 
         # load answer label dict
         with open(C.LABEL2ANS_FILE, 'rb') as f:

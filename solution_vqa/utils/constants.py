@@ -1,6 +1,6 @@
 import os
 
-PROJECT_BASE_PATH = "."
+PROJECT_BASE_PATH = "vqa"
 
 # Object Detection Model
 VISION_COLUMN_NAME = "v_feature"
