@@ -7,21 +7,17 @@
 네이버 커넥트재단의 교육과정 [Boostcamp AI-Tech](https://boostcamp.connect.or.kr/program_ai.html) 2기 KiYOUNG2 팀의 최종 프로젝트를 위한 VQA 모듈의 베이스라인으로 활용하기위해 작성되었습니다.  
 원본 코드는 @jnhwkim의 [SKTBrain/BAN-KVQA](https://github.com/SKTBrain/BAN-KVQA)임을 밝힙니다. 코드 사용을 허락해주신 김진화님께 감사드립니다.
 
-<br />
-<br />
+### Demo
+![Demo](docs/assets/img/demo.gif)  
 
 ### 변경 사항
 - huggingface transformers `v4.12.x` 지원
 - 현재 다운로드 불가능한 `glove-rg`, `word2vec-pkb` 제거
 - arguments 입력 방식 변경 : `argparse` 모듈 대신 `configs/` 경로 내 `*.yaml` 파일 사용
 - Object Detection Module 포함 : `bottom-up-attention`을 submodule로 추가
-<br />
-<br />
 
 ### Model Overview
 ![Overview of bilinear attention networks](docs/assets/img/ban_overview.png)  
-<br />
-<br />
 
 ### 미리 준비할 사항
 
@@ -35,16 +31,13 @@ konlpy >= 0.5.2
 opencv-python >= 4.5.4.60
 scikit-image >= 0.19.0
 ```
-<br />
-<br />
 
 #### submodule 세팅(bottom-up-attention)
 inference demo를 위해 bottom-up-attention을 사용합니다. 기존 caffe model을 pytorch로 변환한 [MILVLG/bottom-up-attention.pytorch](https://github.com/MILVLG/bottom-up-attention.pytorch)를 submodule로 사용합니다. 
-<br />
-<br />
+
 ```
 # Add submodule : bottom-up-attention.pytorch
-git submodule add https://github.com/MILVLG/bottom-up-attention.pytorch bottom_up_attention_pytorch
+git submodule add https://github.com/KiYOUNG2/bottom-up-attention.pytorch bottom_up_attention_pytorch
 git submodule update --init --recursive
 
 # Setup bottom-up-attention
@@ -62,9 +55,6 @@ python setup.py build develop
 wget https://awma1-my.sharepoint.com/:u:/g/personal/yuz_l0_tn/EaXvCC3WjtlLvvEfLr3oa8UBLA21tcLh4L8YLbYXl6jgjg?download=1 -O bua-caffe-frcn-r101_with_attributes.pth
 ```
 
-<br />
-<br />
-
 ### 데모를 위한 데이터 세팅
 
 - VQA 모델의 pretrained weight와 모델 세팅을 위한 바이너리 파일은 [여기](https://drive.google.com/drive/u/0/folders/1qq_mh3HBCe0WALvIjbD4XnTmgjgjfVNH)에서 다운로드 받으실 수 있습니다.
@@ -81,9 +71,6 @@ saved_models
     └── ban-kvqa-roberta-base-rnn.pth
 ```
 
-<br />
-
-
 2. 모델 세팅을 위한 바이너리 파일(`*.vec`, `*.pkl`, `*.npy`)은 다음 경로에 저장합니다.
 ```
 data
@@ -94,26 +81,19 @@ data
 └── cache
     └── trainval_label2ans.kvqa.pkl
 ```
-<br />
-<br />
 
 ### 추론하기
 
 위의 세팅을 마친 후 `ban_kvqa.py`를 실행하면 다음 이미지에 대한 inference test가 실행됩니다.
-<br />
-<br />
 
 #### 실행 커맨드
 ```bash
 python3 ban_kvqa.py
 ```
-<br />
-<br />
 
 #### 테스트 이미지
 ![Image](http://images.cocodataset.org/val2017/000000039769.jpg)
-<br />
-<br />
+
 #### 실행 결과
 ```bash
 질문을 입력하세요 # enter로 넘어갈 시, 기본값 `화면에 뭐가 보여?`로 실행
@@ -122,8 +102,6 @@ img from url
 img from PIL
 ('고양이', True)
 ```
-<br />
-<br />
 
 ### 성능
 BERT의 경우 `KLUE/robeta-base`를 freeze하여 사용하였습니다. 재현 결과 원본 레포에 근사한 성능을 보여줍니다.
@@ -192,8 +170,6 @@ Ran 3 tests in 57.830s
 ```
 
 </details>
-<br />
-<br />
 
 #### `ban-kvqa-fasttext-pkb.pth`
 - Score : `30.81`
@@ -241,8 +217,6 @@ __main__.SomeTest.test_inference_from_url: 1.461
 Ran 3 tests in 27.560s
 ```
 </details>
-<br />
-<br />
 
 ### 인용
 
