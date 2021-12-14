@@ -1,7 +1,6 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_path: ./data
   preprocessing_num_workers: 1
   
   # TokenizerArguments
