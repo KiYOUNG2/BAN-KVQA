@@ -28,7 +28,7 @@ from konlpy.tag import Kkma
 
 from solution_vqa.model import base_model
 from solution_vqa.utils import dictionary_dict
-from solution_vqa.utils import constants as C
+from configs.constants import Config as C
 from solution_vqa.data.dataset import Dictionary
 
 from args import (
@@ -91,13 +91,13 @@ class VQA(QABase):
         # Load Classes & Attribute
         # Load classes
         self.detecter_classes = ['__background__']
-        with open(os.path.join(C.DATA_PATH, C.OBJECT_VOCAB_FILE)) as f:
+        with open(os.path.join(C.DETECTOR_DATA_PATH, C.OBJECT_VOCAB_FILE)) as f:
             for object in f.readlines():
                 self.detecter_classes.append(object.split(',')[0].lower().strip())
 
         # Load attributes
         self.detecter_attributes = ['__no_attribute__']
-        with open(os.path.join(C.DATA_PATH, C.ATTR_VOCAB_FILE)) as f:
+        with open(os.path.join(C.DETECTOR_DATA_PATH, C.ATTR_VOCAB_FILE)) as f:
             for att in f.readlines():
                 self.detecter_attributes.append(att.split(',')[0].lower().strip())
 
@@ -185,8 +185,7 @@ class VQA(QABase):
             ]
         )
         args = parser.parse_yaml_file(yaml_file=os.path.abspath(C.VQA_CONFIG_FILE))
-        data_args, model_args, _, _ = args
-        data_args.dataset_path = C.get_abs_path(C.PROJECT_BASE_PATH, data_args.dataset_path)
+        _, model_args, _, _ = args
 
         # load answer label dict
         with open(C.LABEL2ANS_FILE, 'rb') as f:
@@ -203,7 +202,7 @@ class VQA(QABase):
 
         elif 'fasttext-pkb' in model_args.architectures:
             dictionary_path = os.path.join(
-                                    data_args.dataset_path,
+                                    C.PROJECT_DATA_PATH,
                                     dictionary_dict[model_args.architectures]['dict']
                                     )
             self.dictionary = Dictionary.load_from_file(dictionary_path)
@@ -233,7 +232,7 @@ class VQA(QABase):
 
         if 'bert' not in model_args.architectures:
             self.vqa_model.q_emb.w_emb.init_embedding(os.path.join(
-                                    data_args.dataset_path,
+                                    C.PROJECT_DATA_PATH,
                                     dictionary_dict[model_args.architectures]['embedding']
                                     )
                                     )
@@ -267,7 +266,6 @@ class VQA(QABase):
                 add_special_tokens=True
                 )
         elif hasattr(self.tokenizer, 'morphs'):
-            # max_length -= 2
             tokens = self.tokenizer.morphs(question.replace('.', ''))
             tokens = [self.dictionary.word2idx[token] for token in tokens[:max_length]]
             if len(tokens) < max_length:
@@ -297,7 +295,6 @@ if __name__ == '__main__':
     vqa = VQA()
     image_url = "http://images.cocodataset.org/val2017/000000039769.jpg"
     image = Image.open(requests.get(image_url, stream=True).raw)
-    image.show()
     query = input("질문을 입력하세요") or "화면에 뭐가 보여?"
     # inference from img_url
     print(vqa.answer(query, image_url))

@@ -13,6 +13,7 @@ from solution_vqa.model import base_model
 from solution_vqa.utils import dictionary_dict, set_seed
 import solution_vqa.utils as utils
 from solution_vqa.train import train
+from configs.constants import Config as C
 
 from args import (
     HfArgumentParser,
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     set_seed(training_args.seed)
 
     print(f"model is from {model_args.model_name_or_path}")
-    print(f"data is from {data_args.dataset_path}")
+    print(f"data is from {C.PROJECT_DATA_PATH}")
 
     # wandb setting
     os.environ["WANDB_PROJECT"] = project_args.wandb_project
@@ -61,7 +62,7 @@ if __name__ == '__main__':
         dictionary = None
     else:
         dictionary_path = os.path.join(
-                                data_args.dataset_path,
+                                C.PROJECT_DATA_PATH,
                                 dictionary_dict[model_args.architectures]['dict']
                                 )
         dictionary = Dictionary.load_from_file(dictionary_path)
@@ -71,14 +72,14 @@ if __name__ == '__main__':
                                     split='train',
                                     dictionary=dictionary,
                                     max_length=data_args.max_seq_length,
-                                    dataroot=data_args.dataset_path,
+                                    dataroot=C.PROJECT_DATA_PATH,
                                     tokenizer=dictionary_dict[model_args.architectures]['tokenizer']
                                 )
     val_dset = KvqaFeatureDataset(
                                     split='val',
                                     dictionary=dictionary,
                                     max_length=data_args.max_seq_length,
-                                    dataroot=data_args.dataset_path,
+                                    dataroot=C.PROJECT_DATA_PATH,
                                     tokenizer=dictionary_dict[model_args.architectures]['tokenizer']
                                 )
 
@@ -98,7 +99,7 @@ if __name__ == '__main__':
 
     if 'bert' not in model_args.architectures:
         model.q_emb.w_emb.init_embedding(os.path.join(
-                                data_args.dataset_path,
+                                C.PROJECT_DATA_PATH,
                                 dictionary_dict[model_args.architectures]['embedding']
                                 )
                                 )
