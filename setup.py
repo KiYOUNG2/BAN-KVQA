@@ -1,7 +1,4 @@
-import glob
-from os.path import basename, splitext
 import pathlib
-from typing import ParamSpecKwargs
 from setuptools import find_packages, setup
 
 
