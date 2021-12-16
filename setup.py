@@ -21,10 +21,6 @@ setup(
     author_email="eliza.dukim@gmail.com",
     license="GNU",
 
-    packages=find_packages(where=[
-        'bottom_up_attention_pytorch',
-        'bottom_up_attention_pytorch/detectron2'
-        ],
-        ),
+    packages=find_packages(),
     install_requires=requirements,
 )
