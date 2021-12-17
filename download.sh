@@ -8,13 +8,15 @@ wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MRYi
 wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1w5ffc4FER6gkOWZs6rOZpHWS88ttwnpf' -O ft_init.kvqa.npy
 
 mkdir fasttext
+cd fasttext
 wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=15fwTru453_Z89zOpoRMmyFLnDRYhxuzk' -O ko.vec
 cd ..
 
 mkdir cache
+cd cache
 wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1CgyHMi_T4hCqS1jqECTaGO7zvQzCvrDP' -O trainval_label2ans.kvqa.pkl
 cd ..
-
+cd ..
 
 # Download Model weights
 mkdir saved_models
