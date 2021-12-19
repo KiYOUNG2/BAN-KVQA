@@ -192,3 +192,6 @@ class Logger(object):
         self.log_file.write(msg + '\n')
         self.log_file.flush()
         print(msg)
+
+def get_dist_center(x, y):
+    return (x - 0.5) ** 2 + (y - 0.5) ** 2
