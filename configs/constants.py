@@ -22,8 +22,8 @@ class Config:
     DETECTOR_ROOT_PATH:str = get_abs_path(PROJECT_BASE_PATH, "bottom_up_attention_pytorch/")
     DETECTOR_DATA_PATH:str = os.path.join(DETECTOR_ROOT_PATH, 'evaluation')
     DETECTOR_CONFIG_FILE_PATH:str = os.path.join(DETECTOR_ROOT_PATH, 'configs/bua-caffe/extract-bua-caffe-r101.yaml')
-    OBJECT_VOCAB_FILE:str = 'objects_vocab.txt'
-    ATTR_VOCAB_FILE:str = 'attributes_vocab.txt'
+    OBJECT_VOCAB_FILE:str = 'objects_vocab_ko.txt'
+    ATTR_VOCAB_FILE:str = 'attributes_vocab_ko.txt'
 
     # VQA Model
     # VQA_CONFIG_FILE = './configs/vqa_roberta-base-rnn.yaml'

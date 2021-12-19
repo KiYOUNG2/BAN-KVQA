@@ -27,8 +27,10 @@ from models.bua.layers.nms import nms
 from konlpy.tag import Kkma
 
 from solution_vqa.model import base_model
-from solution_vqa.utils import dictionary_dict
+from solution_vqa.utils import dictionary_dict, get_dist_center
+from solution_vqa.utils.detection_rule_func import rule_base_answer
 from configs.constants import Config as C
+import configs.detection_rule as DETECT_C
 from solution_vqa.data.dataset import Dictionary
 
 from args import (
@@ -63,6 +65,7 @@ class VQA(QABase):
         super().__init__(args=None)
         self._init_detector()
         self._init_vqa()
+
     def answer(
         self,
         query: str,
@@ -70,18 +73,35 @@ class VQA(QABase):
     ) -> Tuple[str, bool]: # str : answer, bool : answeralbe or not
         """Return answer when the question is answerable"""
 
-        sample = self._preprocess_query(query, img)
+        img_features = self._detect_img(img)
 
+        # Step 1 : Rule-based
+        rule_base_result = rule_base_answer(
+                        snt=query,
+                        detected_objs=img_features['objs'],
+                        detected_atts=img_features['atts'],
+                        detected_dist_centers=img_features['dist_centers'],
+                        tagger=self.detect_rule_base_tokenizer
+                        )
+
+        if rule_base_result != 'unanswerable':
+            return rule_base_result, True
+
+        # Step 2 : VQA Model
         with torch.no_grad():
-            v_features = sample[C.VISION_COLUMN_NAME].to(self.device)
-            spatials   = sample[C.SPATIAL_COLUMN_NAME].to(self.device)
-            question   = sample[C.QUESTION_COLUMN_NAME].to(self.device)
+            v_features = img_features['x'].unsqueeze(0).to(self.device)
+            spatials   = img_features['bbox'].unsqueeze(0).to(self.device)
+            question   = self._tokenize_question(query).to(self.device)
             pred, _, _ = self.vqa_model(v_features, spatials, question, 'sample', None)
             idx = torch.argmax(pred).item()
             pred_class = self.vqa_label2ans[idx]
-        
 
-        if pred_class == 'unanswerable':
+        if pred_class.lower() == 'yes':
+            pred_class = '응'
+        elif pred_class.lower() == 'no':
+            pred_class = '아니'
+        
+        if pred_class.lower() == 'unanswerable':
             return pred_class, False
         else:
             return pred_class, True
@@ -131,12 +151,14 @@ class VQA(QABase):
                     ),
                 cv2.IMREAD_COLOR
                 )
+
     def _detect_img(self, img: Union[str, Image.Image]):
         """Detect Object from input image url
 
         Args:
             img (Union[str, Image.Image]): image url or PIL.Image.Image object
         """
+
         im = self._read_img(img)
         dataset_dict = get_image_blob(im, self.detecter_cfg.MODEL.PIXEL_MEAN)
 
@@ -165,14 +187,61 @@ class VQA(QABase):
 
         image_feat = feats[keep_boxes]
         image_bboxes = dets[keep_boxes]
+        image_h = np.size(im, 0)
+        image_w = np.size(im, 1)
 
-        return {
+        result = {
             'x':image_feat,
             'bbox':image_bboxes,
             'num_bbox':len(keep_boxes),
-            'image_h':np.size(im, 0),
-            'image_w':np.size(im, 1),
             }
+
+        boxes = dets[keep_boxes].numpy()
+        objects = np.argmax(scores[keep_boxes].numpy()[:,1:], axis=1)
+        attr_thresh = 0.1
+        attr = np.argmax(attr_scores[keep_boxes].numpy()[:,1:], axis=1)
+        attr_conf = np.max(attr_scores[keep_boxes].numpy()[:,1:], axis=1)
+
+        detected_objs = []
+        detected_atts = []
+        detected_dist_centers = []
+
+        for i in range(len(keep_boxes)):
+            bbox = boxes[i]
+            if bbox[0] == 0:
+                bbox[0] = 1
+            if bbox[1] == 0:
+                bbox[1] = 1
+
+            cls_ = DETECT_C.CLASSES[objects[i]+1]
+            detected_objs.append(cls_)
+
+            if attr_conf[i] > attr_thresh:
+                cur_att = DETECT_C.ATTRIBUTES[attr[i]+1]
+                detected_atts.append(cur_att)
+                cls_ = DETECT_C.ATTRIBUTES[attr[i]+1] + "_" + cls_
+            else:
+                detected_atts.append('__no_attribute__')
+
+            LD = [bbox[0] / image_w, bbox[1] / image_h]
+            LU = [bbox[0] / image_w, bbox[3] / image_h]
+            RD = [bbox[2] / image_w, bbox[1] / image_h]
+            RU = [bbox[2] / image_w, bbox[3] / image_h]
+
+            corner_cordinates = (LD, LU, RD, RU)
+
+            dist = min([get_dist_center(*cord) for cord in corner_cordinates])
+            detected_dist_centers.append((i, dist))
+
+        result.update(
+            {
+                "objs" : detected_objs,
+                "atts" : detected_atts,
+                "dist_centers" : detected_dist_centers,
+            }
+        )
+        return result
+
     def _init_vqa(self):
         
         # setup configs
@@ -196,6 +265,7 @@ class VQA(QABase):
         # Load dictionary file
         if 'bert' in model_args.architectures:
             self.tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
+            self.detect_rule_base_tokenizer = Kkma()
             self.dictionary = self.tokenizer.vocab
             NTOKEN = None
             VQA_WEIGHT_FILE = C.VQA_BERT_WEIGHT_FILE
@@ -207,9 +277,10 @@ class VQA(QABase):
                                     )
             self.dictionary = Dictionary.load_from_file(dictionary_path)
             self.tokenizer = Kkma()
+            self.detect_rule_base_tokenizer = self.tokenizer
 
             # To speed up Kkma tokenizer, Do tokenize "Dummy input"
-            self.tokenizer.morphs("Dummy input")
+            self.detect_rule_base_tokenizer.morphs("Dummy input")
 
             NTOKEN = self.dictionary.ntoken
             VQA_WEIGHT_FILE = C.VQA_FASTTEXT_WEIGHT_FILE
@@ -246,6 +317,7 @@ class VQA(QABase):
         self.vqa_model.load_state_dict(model_state)
         del model_state
         self.vqa_model.eval()
+
     def _tokenize_question(self, question:str, max_length=16) -> torch.Tensor:
         """Tokenizes the questions.
 
@@ -273,22 +345,6 @@ class VQA(QABase):
                 padding = [self.dictionary.padding_idx] * (max_length - len(tokens))
                 tokens = tokens + padding
             return torch.tensor([tokens])
-
-    def _preprocess_query(self, question:str, img:Union[str, Image.Image]):
-        """Preprocess question and image for VQA Model
-
-        Args:
-            question (str): question about input image
-            img (Image.Image): image url or PIL.Image.Image object
-        """
-
-        img_features = self._detect_img(img)
-        question = self._tokenize_question(question)
-        return {
-            "v_feature"   : img_features['x'].unsqueeze(0),
-            "spatials"    : img_features['bbox'].unsqueeze(0),
-            "question"    : question,
-            }
 
 
 if __name__ == '__main__':
