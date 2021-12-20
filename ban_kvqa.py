@@ -102,7 +102,7 @@ class VQA(QABase):
             pred_class = '아니'
         
         if pred_class.lower() == 'unanswerable':
-            return pred_class, False
+            return "", False
         else:
             return pred_class, True
 
